@@ -19,7 +19,7 @@ def get_leave_balance(email):
     if challenge:
         return jsonify({"challenge": challenge})
 
-    # ✅ Normal GET request processing
+
     email = email.lower()
     if email in leave_balances:
         return jsonify({
