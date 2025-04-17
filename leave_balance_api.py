@@ -1,80 +1,36 @@
-from flask import Flask, jsonify, request
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from typing import Dict
 
-app = Flask(__name__)
+app = FastAPI()
 
-
+# Sample leave balances for demo purposes
 leave_balances = {
-    "john@example.com": {"casual": 5, "sick": 2, "earned": 10},
-    "pini@example.com": {"casual": 8, "sick": 1, "earned": 7}
+    "john.doe@example.com": {"casual_leave": 5, "sick_leave": 3, "earned_leave": 10},
+    "pini@example.com": {"casual_leave": 8, "sick_leave": 2, "earned_leave": 7},
 }
 
+# Pydantic model for incoming request
+class LeaveRequest(BaseModel):
+    email: str
 
-VALID_TOKEN = "securetoken123"
-
-# ✅ Webhook validation endpoint for ChatBot.com
-@app.route("/leave_balance", methods=["GET"])
-def validate_webhook():
-    challenge = request.args.get("challenge")
-    
-
-    token = request.headers.get("Authorization")
-    if not token or not token.startswith("Bearer "):
-        return jsonify({"error": "Unauthorized - Missing or invalid token"}), 401
-    
-
-    token = token.split(" ")[1]  
-    if token != VALID_TOKEN:
-        return jsonify({"error": "Unauthorized - Invalid token"}), 401
-    
-    if challenge:
-        return challenge, 200
-    return "Missing challenge parameter", 400
-
-
-
-@app.route("/leave_balance/<email>", methods=["GET", "POST"])
-def handle_leave_balance(email):
-    email = email.lower()
-
-    # Token validation for actual leave balance API (GET/POST request)
-    token = request.headers.get("Authorization")
-    if not token or not token.startswith("Bearer "):
-        return jsonify({"error": "Unauthorized - Missing or invalid token"}), 401
-    
-    token = token.split(" ")[1]  # Get token part after "Bearer"
-    if token != VALID_TOKEN:
-        return jsonify({"error": "Unauthorized - Invalid token"}), 401
-
-    # Handle GET request to fetch leave balance
-    if request.method == "GET":
-        if email in leave_balances:
-            return jsonify({
-                "email": email,
-                "leave_balance": leave_balances[email]
-            }), 200
-        else:
-            return jsonify({
-                "error": "User not found"
-            }), 404
-
-
-    if request.method == "POST":
-        data = request.get_json()
-
-        if email not in leave_balances:
-            leave_balances[email] = {"casual": 0, "sick": 0, "earned": 0}
-
-        for leave_type in data:
-            if leave_type in leave_balances[email]:
-                leave_balances[email][leave_type] += data[leave_type]
-            else:
-                leave_balances[email][leave_type] = data[leave_type]
-
-        return jsonify({
-            "message": "Leave balance updated",
+# Webhook endpoint
+@app.post("/leave-balance")
+async def get_leave_balance(request: LeaveRequest):
+    email = request.email
+    if email in leave_balances:
+        return {
+            "status": "success",
+            "email": email,
             "leave_balance": leave_balances[email]
-        }), 200
+        }
+    else:
+        return {
+            "status": "error",
+            "message": f"No leave data found for {email}"
+        }
 
-
-if __name__ == "__main__":
-    app.run(debug=True)
+# Optional health check route
+@app.get("/")
+def root():
+    return {"message": "Leave Balance API Webhook is live"}
