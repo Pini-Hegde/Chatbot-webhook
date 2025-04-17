@@ -12,7 +12,7 @@ leave_balances = {
 VALID_TOKEN = "securetoken123"
 
 # ✅ Webhook validation endpoint for ChatBot.com
-@app.route("/leave_balance/john@example.com", methods=["GET"])
+@app.route("/leave_balance", methods=["GET"])
 def validate_webhook():
     challenge = request.args.get("challenge")
     
