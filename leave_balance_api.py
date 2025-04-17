@@ -1,36 +1,38 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-from typing import Dict
+from flask import Flask, jsonify, request
 
-app = FastAPI()
+app = Flask(__name__)
 
-# Sample leave balances for demo purposes
+# Sample in-memory database of leave balances
 leave_balances = {
-    "john.doe@example.com": {"casual_leave": 5, "sick_leave": 3, "earned_leave": 10},
-    "pini@example.com": {"casual_leave": 8, "sick_leave": 2, "earned_leave": 7},
+    "john@example.com": {"casual": 5, "sick": 2, "earned": 10},
+    "pini@example.com": {"casual": 8, "sick": 1, "earned": 7}
 }
 
-# Pydantic model for incoming request
-class LeaveRequest(BaseModel):
-    email: str
+@app.route("/")
+def home():
+    return "✅ Leave Balance API is running!", 200
 
-# Webhook endpoint
-@app.post("/leave-balance")
-async def get_leave_balance(request: LeaveRequest):
-    email = request.email
+@app.route("/leave_balance/<email>", methods=["GET"])
+def get_leave_balance(email):
+    email = email.lower()
+
+    # ✅ Handle ChatBot.com webhook URL validation challenge
+    challenge = request.args.get("challenge")
+    if challenge:
+        return jsonify({"challenge": challenge})
+
+    # ✅ Handle valid leave balance requests
     if email in leave_balances:
-        return {
-            "status": "success",
+        return jsonify({
             "email": email,
             "leave_balance": leave_balances[email]
-        }
+        }), 200
     else:
-        return {
-            "status": "error",
-            "message": f"No leave data found for {email}"
-        }
+        return jsonify({
+            "error": "User not found",
+            "email_provided": email
+        }), 404
 
-# Optional health check route
-@app.get("/")
-def root():
-    return {"message": "Leave Balance API Webhook is live"}
+# Run the Flask app
+if __name__ == "__main__":
+    app.run(debug=True)
