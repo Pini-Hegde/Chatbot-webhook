@@ -2,35 +2,54 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Sample in-memory leave balance database
+
+VERIFICATION_TOKEN = 'A9f$Lx7!eQ2@Zm#4'
+
+
 leave_balances = {
-    "john@example.com": {"casual": 5, "sick": 2, "earned": 10},
-    "pini@example.com": {"casual": 8, "sick": 1, "earned": 7}
+    "john.doe@example.com": {"casual": 5, "sick": 2},
+    "pini@example.com": {"casual": 3, "sick": 1},
+    "default": {"casual": 0, "sick": 0}
 }
 
-@app.route("/")
-def home():
-    return "✅ Leave Balance API is running!", 200
+@app.route('/leave_balance/', methods=['GET'])
+def verify_token():
+    token = request.args.get('token')
+    challenge = request.args.get('challenge')
 
-@app.route("/leave_balance/<email>", methods=["GET"])
-def get_leave_balance(email):
-    # ✅ Handle ChatBot.com URL validation
-    challenge = request.args.get("challenge")
-    if challenge:
-        return jsonify({"challenge": challenge})
+    if token != VERIFICATION_TOKEN:
+        return 'Unauthorized', 401
+
+    return challenge, 200
+
+@app.route('/leave_balance/', methods=['POST'])
+def webhook():
+    token = request.args.get('token')
+    if token != VERIFICATION_TOKEN:
+        return 'Unauthorized', 401
+
+    data = request.json
+    print("Incoming request:", data)
 
 
-    email = email.lower()
-    if email in leave_balances:
-        return jsonify({
-            "email": email,
-            "leave_balance": leave_balances[email]
-        }), 200
-    else:
-        return jsonify({
-            "error": "User not found",
-            "email_provided": email
-        }), 404
+    user_email = data.get("user", {}).get("email", "john.doe@example.com")
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    leave_data = leave_balances.get(user_email, leave_balances["default"])
+    casual = leave_data["casual"]
+    sick = leave_data["sick"]
+
+    response_text = f"Annual leave : {sick}"
+
+    response = {
+        "responses": [
+            {
+                "type": "text",
+                "message": response_text
+            }
+        ]
+    }
+
+    return jsonify(response)
+
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
