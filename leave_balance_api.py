@@ -2,13 +2,12 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-
-VERIFICATION_TOKEN = 'A9f$Lx7!eQ2@Zm#4'
-
+VERIFICATION_TOKEN = 'A9f$Lx7!eQ2@Zm4'
 
 leave_balances = {
     "john.doe@example.com": {"casual": 5, "sick": 2},
     "pini@example.com": {"casual": 3, "sick": 1},
+    "rajesh@example.com": {"annual": 10, "sick": 1},
     "default": {"casual": 0, "sick": 0}
 }
 
@@ -28,17 +27,18 @@ def webhook():
     if token != VERIFICATION_TOKEN:
         return 'Unauthorized', 401
 
-    data = request.json
-    print("Incoming request:", data)
+    # Get email from request header
+    user_email = request.headers.get('X-User-Email')
+    if not user_email:
+        return jsonify({"error": "Email is required in the headers"}), 400
 
-
-    user_email = data.get("user", {}).get("email", "john.doe@example.com")
-
+    # Process the leave balance
     leave_data = leave_balances.get(user_email, leave_balances["default"])
-    casual = leave_data["casual"]
-    sick = leave_data["sick"]
+    # casual = leave_data["casual"]
+    # sick = leave_data["sick"]
+    annual = leave_data["annual"]
 
-    response_text = f"Annual leave : {sick}"
+    response_text = f"Annual leave : {annual}"
 
     response = {
         "responses": [
@@ -52,4 +52,4 @@ def webhook():
     return jsonify(response)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=3000, debug=True)
